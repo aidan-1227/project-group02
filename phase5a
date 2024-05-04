@@ -1,0 +1,872 @@
+INSERT INTO events (title, starts, ends, venue_id)
+VALUES ('Valentine''s Day', '2018-02-14 00:00', '2018-02-14 23:59', (
+SELECT venue_id
+FROM venues
+WHERE name = ''
+)
+);
+SELECT count(title)
+FROM events
+WHERE title LIKE '%Day%';
+SELECT min(starts), max(ends)
+FROM events INNER JOIN venues
+ON events.venue_id = venues.venue_id
+WHERE venues.name = 'Crystal Ballroom';
+SELECT count(*) FROM events WHERE venue_id = 1;
+SELECT count(*) FROM events WHERE venue_id = 2;
+SELECT count(*) FROM events WHERE venue_id = 3;
+SELECT count(*) FROM events WHERE venue_id IS NULL;
+SELECT venue_id, count(*)
+FROM events
+GROUP BY venue_id;
+SELECT * FROM EVENTS;
+SELECT * FROM VENUES
+;
+SELECT venue_id
+FROM events
+GROUP BY venue_id
+HAVING count(*) >= 2 AND venue_id IS NOT NULL;
+SELECT venue_id FROM events GROUP BY venue_id;
+SELECT DISTINCT venue_id FROM events;
+SELECT title, venue_id, count(*)
+FROM events
+GROUP BY venue_id;
+SELECT title, count(*) OVER (PARTITION BY venue_id) FROM events;
+BEGIN TRANSACTION;
+DELETE FROM events;
+ROLLBACK;
+SELECT * FROM events;
+BEGIN TRANSACTION;
+UPDATE account SET total=total+5000.0 WHERE account_id=1337;
+UPDATE account SET total=total-5000.0 WHERE account_id=45887;
+END;
+CREATE OR REPLACE FUNCTION add_event(
+title text,
+starts timestamp,
+ends timestamp,
+venue text,
+postal varchar(9),
+country char(2))
+RETURNS boolean AS $$
+DECLARE
+did_insert boolean := false;
+found_count integer;
+the_venue_id integer;
+BEGIN
+SELECT venue_id INTO the_venue_id
+FROM venues v
+WHERE v.postal_code=postal AND v.country_code=country AND v.name ILIKE
+venue
+LIMIT 1;
+IF the_venue_id IS NULL THEN
+INSERT INTO venues (name, postal_code, country_code)
+VALUES (venue, postal, country)
+RETURNING venue_id INTO the_venue_id;
+did_insert := true;
+END IF;
+-- Note: this is a notice, not an error as in some programming languages
+RAISE NOTICE 'Venue found %', the_venue_id;
+INSERT INTO events (title, starts, ends, venue_id)
+VALUES (title, starts, ends, the_venue_id);
+RETURN did_insert;
+END;
+$$ LANGUAGE plpgsql;
+create extension tablefunc;
+create extension dict_xsyn;
+create extension fuzzystrmatch;
+create extension pg_trgm;
+create extension cube;
+\i add_event.sql
+SELECT add_event('House Party', '2018-05-03 23:00',
+'2018-05-04 02:00', 'Run''s House', '97206', 'us');
+createlang 7dbs --list
+;
+\q
+CREATE TABLE logs (
+event_id integer,
+old_title varchar(255),
+old_starts timestamp,
+old_ends timestamp,
+logged_at timestamp DEFAULT current_timestamp
+);
+SELECT add_event('House Party', '2018-05-03 23:00',
+'2018-05-04 02:00', 'Run''s House', '97206', 'us');
+CREATE OR REPLACE FUNCTION log_event() RETURNS trigger AS $$
+DECLARE
+BEGIN
+INSERT INTO logs (event_id, old_title, old_starts, old_ends)
+VALUES (OLD.event_id, OLD.title, OLD.starts, OLD.ends);
+RAISE NOTICE 'Someone just changed event #%', OLD.event_id;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER log_events
+AFTER UPDATE ON events
+FOR EACH ROW EXECUTE PROCEDURE log_event();
+UPDATE events
+SET ends='2018-05-04 01:00:00'
+WHERE title='House Party';
+SELECT event_id, old_title, old_ends, logged_at
+FROM logs;
+CREATE VIEW holidays AS
+SELECT event_id AS holiday_id, title AS name, starts AS date
+FROM events
+WHERE title LIKE '%Day%' AND venue_id IS NULL;
+SELECT name, to_char(date, 'Month DD, YYYY') AS date
+FROM holidays
+WHERE date <= '2018-04-01';
+ALTER TABLE events
+ADD colors text ARRAY;
+CREATE OR REPLACE VIEW holidays AS
+SELECT event_id AS holiday_id, title AS name, starts AS date, colors
+FROM events
+WHERE title LIKE '%Day%' AND venue_id IS NULL;
+UPDATE holidays SET colors = '{"red","green"}' where name = 'Christmas
+Day';
+\h RULE
+EXPLAIN VERBOSE
+SELECT *
+FROM holidays;
+EXPLAIN VERBOSE
+SELECT event_id AS holiday_id,
+title AS name, starts AS date, colors
+FROM events
+WHERE title LIKE '%Day%' AND venue_id IS NULL;
+CREATE RULE update_holidays AS ON UPDATE TO holidays DO INSTEAD
+UPDATE events
+SET title = NEW.name,
+starts = NEW.date,
+colors = NEW.colors
+WHERE title = OLD.name;
+UPDATE holidays SET colors = '{"red","green"}' where name = 'Christmas
+Day';
+CREATE RULE insert_holidays AS ON INSERT TO holidays DO INSTEAD
+INSERT INTO ...
+;
+SELECT extract(year from starts) as year,
+extract(month from starts) as month, count(*)
+FROM events
+GROUP BY year, month
+ORDER BY year, month;
+CREATE TEMPORARY TABLE month_count(month INT);
+INSERT INTO month_count VALUES (1),(2),(3),(4),(5),
+(6),(7),(8),(9),(10),(11),(12);
+SELECT * FROM crosstab(
+'SELECT extract(year from starts) as year,
+extract(month from starts) as month, count(*)
+FROM events
+GROUP BY year, month
+ORDER BY year, month',
+'SELECT * FROM month_count'
+);
+SELECT * FROM crosstab(
+'SELECT extract(year from starts) as year,
+extract(month from starts) as month, count(*)
+FROM events
+GROUP BY year, month
+ORDER BY year, month',
+'SELECT * FROM month_count'
+) AS (
+year int,
+jan int, feb int, mar int, apr int, may int, jun int,
+jul int, aug int, sep int, oct int, nov int, dec int
+) ORDER BY YEAR;
+\s DAYTWO
+\q
+CREATE TABLE genres (
+name text UNIQUE,
+position integer
+);
+CREATE TABLE movies (
+movie_id SERIAL PRIMARY KEY,
+title text,
+genre cube
+);
+CREATE TABLE actors (
+actor_id SERIAL PRIMARY KEY,
+name text
+);
+CREATE TABLE movies_actors (
+movie_id integer REFERENCES movies NOT NULL,
+actor_id integer REFERENCES actors NOT NULL,
+UNIQUE (movie_id, actor_id)
+);
+CREATE INDEX movies_actors_movie_id ON movies_actors (movie_id);
+CREATE INDEX movies_actors_actor_id ON movies_actors (actor_id);
+CREATE INDEX movies_genres_cube ON movies USING gist (genre);
+SELECT title FROM movies WHERE title ILIKE 'stardust%';
+SELECT * FROM movies
+;
+SELECT title FROM movies WHERE title ILIKE 'stardust_%';
+SELECT COUNT(*) FROM movies WHERE title !~* '^the.*';
+CREATE INDEX movies_title_pattern ON movies (lower(title)
+text_pattern_ops);
+SELECT levenshtein('bat', 'fads');
+SELECT levenshtein('bat', 'fad') fad,
+levenshtein('bat', 'fat') fat,
+levenshtein('bat', 'bat') bat;
+SELECT movie_id, title FROM movies
+WHERE levenshtein(lower(title), lower('a hard day nght')) <= 3;
+SELECT show_trgm('Avatar');
+CREATE INDEX movies_title_trigram ON movies
+USING gist (title gist_trgm_ops);
+SELECT title
+FROM movies
+WHERE title % 'Avatre';
+SELECT title
+FROM movies
+WHERE title % 'Avatre';
+SELECT title
+FROM movies
+WHERE title @@ 'night & day';
+SELECT title
+FROM movies
+WHERE to_tsvector(title) @@ to_tsquery('english', 'night & day');
+\echo uhh i don't know what i'm supposed to put in the table
+SELECT to_tsvector('A Hard Day''s Night'),
+to_tsquery('english', 'night & day');
+SELECT *
+FROM movies
+WHERE title @@ to_tsquery('english', 'a');
+cat `pg_config --sharedir`/tsearch_data/english.stop
+;
+\q
+SELECT to_tsvector('english', 'A Hard Day''s Night');
+SELECT to_tsvector('simple', 'A Hard Day''s Night');
+\dF
+\dFd
+SELECT ts_lexize('english_stem', 'Day''s');
+SELECT to_tsvector('german', 'was machst du gerade?');
+EXPLAIN
+SELECT *
+FROM movies
+WHERE title @@ 'night & day';
+CREATE INDEX movies_title_searchable ON movies
+USING gin(to_tsvector('english', title));
+EXPLAIN
+SELECT *
+FROM movies
+WHERE title @@ 'night & day';
+EXPLAIN
+SELECT *
+FROM movies
+WHERE to_tsvector('english',title) @@ 'night & day';
+SELECT *
+FROM actors
+WHERE name = 'Broos Wils';
+SELECT *
+FROM actors
+WHERE name % 'Broos Wils';
+SELECT title
+FROM movies NATURAL JOIN movies_actors NATURAL JOIN actors
+WHERE metaphone(name, 6) = metaphone('Broos Wils', 6);\
+SELECT title
+FROM movies NATURAL JOIN movies_actors NATURAL JOIN actors
+WHERE metaphone(name, 6) = metaphone('Broos Wils', 6);
+SELECT name, dmetaphone(name), dmetaphone_alt(name),
+metaphone(name, 8), soundex(name)
+FROM actors;
+\q
+\i movies_data.sql
+\i movies_data_1.sql
+CREATE TABLE genres (
+name text UNIQUE,
+position integer
+);
+CREATE TABLE movies (
+movie_id SERIAL PRIMARY KEY,
+title text,
+genre cube
+);
+CREATE TABLE actors (
+actor_id SERIAL PRIMARY KEY,
+name text
+);
+CREATE TABLE movies_actors (
+movie_id integer REFERENCES movies NOT NULL,
+actor_id integer REFERENCES actors NOT NULL,
+UNIQUE (movie_id, actor_id)
+);
+CREATE INDEX movies_actors_movie_id ON movies_actors (movie_id);
+CREATE INDEX movies_actors_actor_id ON movies_actors (actor_id);
+CREATE INDEX movies_genres_cube ON movies USING gist (genre);
+SELECT title FROM movies WHERE title ILIKE 'stardust%';
+SELECT title FROM movies WHERE title ILIKE 'stardust_%';
+SELECT COUNT(*) FROM movies WHERE title !~* '^the.*';
+CREATE INDEX movies_title_pattern ON movies (lower(title)
+text_pattern_ops);
+SELECT levenshtein('bat', 'fads');
+SELECT levenshtein('bat', 'fad') fad,
+levenshtein('bat', 'fat') fat,
+levenshtein('bat', 'bat') bat;
+SELECT movie_id, title FROM movies
+WHERE levenshtein(lower(title), lower('a hard day nght')) <= 3;
+SELECT show_trgm('Avatar');
+CREATE INDEX movies_title_trigram ON movies
+USING gist (title gist_trgm_ops);
+SELECT title
+FROM movies
+WHERE title % 'Avatre';
+SELECT title
+FROM movies
+WHERE title @@ 'night & day';
+SELECT title
+FROM movies
+WHERE to_tsvector(title) @@ to_tsquery('english', 'night & day');
+SELECT to_tsvector('A Hard Day''s Night'),
+to_tsquery('english', 'night & day');
+SELECT *
+FROM movies
+WHERE title @@ to_tsquery('english', 'a');
+\q
+SELECT to_tsvector('english', 'A Hard Day''s Night');
+SELECT to_tsvector('simple', 'A Hard Day''s Night');
+\dF
+\dFd
+SELECT ts_lexize('english_stem', 'Day''s');
+SELECT to_tsvector('german', 'was machst du gerade?');
+EXPLAIN
+SELECT *
+FROM movies
+WHERE title @@ 'night & day';
+CREATE INDEX movies_title_searchable ON movies
+USING gin(to_tsvector('english', title));
+EXPLAIN
+SELECT *
+FROM movies
+WHERE title @@ 'night & day';
+EXPLAIN
+SELECT *
+FROM movies
+WHERE to_tsvector('english',title) @@ 'night & day';
+SELECT *
+FROM actors
+WHERE name = 'Broos Wils';
+SELECT *
+FROM actors
+WHERE name % 'Broos Wils';
+SELECT title
+FROM movies NATURAL JOIN movies_actors NATURAL JOIN actors
+WHERE metaphone(name, 6) = metaphone('Broos Wils', 6);
+SELECT name, dmetaphone(name), dmetaphone_alt(name),
+metaphone(name, 8), soundex(name)
+FROM actors;
+SELECT * FROM actors
+WHERE metaphone(name,8) % metaphone('Robin Williams',8)
+ORDER BY levenshtein(lower('Robin Williams'), lower(name));
+SELECT * FROM actors WHERE dmetaphone(name) % dmetaphone('Ron');
+SELECT name,
+cube_ur_coord('(0,7,0,0,0,0,0,0,0,7,0,0,0,0,10,0,0,0)', position) as score
+FROM genres g
+WHERE cube_ur_coord('(0,7,0,0,0,0,0,0,0,7,0,0,0,0,10,0,0,0)', position) >
+0;
+SELECT *,
+cube_distance(genre, '(0,7,0,0,0,0,0,0,0,7,0,0,0,0,10,0,0,0)') dist
+FROM movies
+ORDER BY dist;
+SELECT cube_enlarge('(1,1)',1,2);
+SELECT title,
+cube_distance(genre, '(0,7,0,0,0,0,0,0,0,7,0,0,0,0,10,0,0,0)') dist
+FROM movies
+WHERE cube_enlarge('(0,7,0,0,0,0,0,0,0,7,0,0,0,0,10,0,0,0)'::cube, 5, 18)
+@> genre
+ORDER BY dist;
+SELECT m.movie_id, m.title
+FROM movies m, (SELECT genre, title FROM movies WHERE title = 'Mad Max') s
+WHERE cube_enlarge(s.genre, 5, 18) @> m.genre AND s.title <> m.title
+ORDER BY cube_distance(m.genre, s.genre)
+LIMIT 10;
+\s DAYTHREE
+\Q
+\q
+CREATE TABLE Goat (
+Tag SERIAL PRIMARY KEY,
+EID INTEGER PRIMARY KEY,
+DamEID INTEGER,
+DamTag INTEGER,
+FOREIGN KEY (DamEID, DamTag) REFERENCES Goat(EID, Tag)
+);
+CREATE TABLE Goat (
+Tag SERIAL,
+EID INTEGER,
+DamEID INTEGER,
+DamTag INTEGER,
+FOREIGN KEY (DamEID, DamTag) REFERENCES Goat(EID, Tag),
+PRIMARY KEY (Tag, EID));
+\h insert
+INSERT INTO goat (EID) VALUES (1);
+INSERT INTO goat (EID) VALUES (2);
+SELECT * FROM GOAT;
+INSERT INTO goat (EID, Dameid, damtag) values (2, 1, 1);
+SELECT * FROM GOAT;
+INSERT INTO goat (EID, Dameid, damtag) values (3, 1, 1);
+INSERT INTO goat (EID, Dameid, damtag) values (4, 2, 3);
+SELECT tag, eid, damtag, dameid FROM GOAT;
+INSERT INTO goat (EID, Dameid, damtag) values (5, 2, 3);
+INSERT INTO goat (EID, Dameid, damtag) values (6, 2, 3);
+SELECT tag, eid, damtag, dameid FROM GOAT;
+INSERT INTO goat (EID, Dameid, damtag) values (7, 4, 3);
+INSERT INTO goat (EID, Dameid, damtag) values (7, 3, 4);
+SELECT tag, eid, damtag, dameid FROM GOAT;
+INSERT INTO goat (EID, Dameid, damtag) values (8, 3, 4);
+SELECT tag, eid, damtag, dameid FROM GOAT;
+INSERT INTO goat (EID, Dameid, damtag) values (5, 2, 2);
+INSERT INTO goat (EID, Dameid, damtag) values (8, 2, 2);
+SELECT tag, eid, damtag, dameid FROM GOAT;
+\q
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+\i test.sql 
+SELECT *  FROM GoatFamilyTree;
+\q
+\dv
+\dt
+ALTER TABLE Goat 
+ADD COLUMN BirthDate TIMESTAMP;
+SELECT * FROM goat;
+DELETE FROM goat;
+SELECT * FROM goat;
+INSERT INTO goat (eid, dameid, damtag, birthdate)
+VALUES
+(1, NULL, NULL, '02-09-2000'),
+(2, 1, 1, '01-01-2001'),
+(3, 1, 1, '01-01-2001');
+INSERT INTO goat (eid, dameid, damtag, birthdate)
+VALUES
+(1, NULL, NULL, '02-09-2000');
+INSERT INTO goat (eid, dameid, damtag, birthdate)
+VALUES
+(2, 1, 1, '01-01-2001'),
+(3, 1, 1, '01-01-2001');
+SELECT * FROM GOAT;
+INSERT INTO goat (eid, dameid, damtag, birthdate)
+VALUES
+(2, 1, 16, '01-01-2001'),
+(3, 1, 16, '01-01-2001');
+SELECT * FROM GOAT;
+INSERT INTO goat (eid, dameid, damtag, birthdate) 
+VALUES
+(4, 2, 19, '2004-12-15'),
+(5, 2, 19, '2005-01-07'),
+(6, 2, 19, '2006-01-14');
+SELECT * FROM GOAT;
+INSERT INTO goat (eid, dameid, damtag, birthdate)
+VALUES
+(7, 3, 20, '2004-07-20'),
+(8, 3, 20, '2009-12-04'),
+(9, 3, 20, '2006-01-31');
+INSERT INTO goat (eid, dameid, damtag, birthdate)
+VALUES
+SELECT * FROM GOAT;
+select * from goat;
+INSERT INTO goat (eid, dameid, damtag, birthdate)
+VALUES
+(10, 9, 26, '2022-08-23'),
+(11, 9, 26, '2020-10-31');
+select * from goat;
+\i test.sql
+\q
+\i test.sql 
+\dv
+SELECT * FROM goatbirthcohort;
+\i test.sql 
+SELECT * FROM goatbirthcohort;
+\q
+\dt
+SELECT * FROM goat;
+\i test.sql 
+\dv
+SELECT * FROM goatbirthcohort;
+SELECT * FROM goatfamilytree;
+\i test.sql 
+SELECT * FROM goatfamilytree;
+\q
+\q
+\dv
+\i ImportGoat.sql 
+\dt
+\q
+\dt
+\dv
+\i ImportGoat.sql 
+\q
+\i ImportGoat.sql 
+\q
+\i ImportGoat.sql 
+\wf
+\dt
+SELECT * FROM animal;
+\q
+\i ImportGoat.sql 
+\q
+\dt
+\q
+\dt
+\dt
+SELECT * FROM goat;
+CREATE TEMPORARY TABLE GoatTemp;
+CREATE TEMPORARY TABLE GoatTemp(tag, eid, damtag);
+CREATE TEMPORARY TABLE GoatTemp(tag, eid, damtag);
+CREATE TEMPORARY TABLE GoatTemp(tag, eid, damtag);
+CREATE TEMPORARY TABLE GoatTemp(
+tag,
+eid,
+damtag
+);
+CREATE VIEW Temp AS
+SELECT tag, eid, damtag
+FROM goat
+;
+SELECT * FROM TEMP;
+SELECT tag, eid, damtag
+FROM goat
+UNION ALL
+SELECT g.dameid
+FROM goat g
+INNER JOIN goat a ON a.damtag = g.tag;
+SELECT tag, eid, damtag
+FROM goat
+UNION ALL
+SELECT g.tag, g.eid, g.damtag, g.dameid
+FROM goat g
+INNER JOIN goat a ON a.damtag = g.tag;
+
+SELECT g.tag, g.eid, g.damtag, g.dameid
+FROM goat g
+INNER JOIN goat a ON a.damtag = g.tag;
+\q
+\i ImportGoat.sql 
+\dt
+\q
+\dv
+\dt
+\i Project/ImportGoat.sql 
+\q
+\q
+\dt
+\dv
+\i ImportGoat.sql
+\q
+\i ImportGoat.sql 
+\i ImportGoat.sql 
+\i ImportGoat.sql 
+\q
+\dt
+\dv
+\i ImportGoat.sql 
+\i ImportGoat.sql 
+\q
+\i ImportGoat.sql 
+\q
+\dt
+SELECT * FROM GOAT;
+\q
+\dt
+DROP TABLE goat;
+DROP TABLE goat CASCADE;
+\dv
+\dt
+\i ImportGoat.sql 
+\q
+\i ImportGoat.sql 
+\q
+\i ImportGoat.sql 
+\q
+\i ImportGoat.sql 
+\q
+\i ImportGoat.sql 
+\q
+\i ImportGoat.sql 
+\d
+\q
+\dt
+\dv
+DROP TABLE goat;
+\i ImportGoat.sql 
+\q
+\i ImportGoat.sql 
+\dt
+SELECT * FROM GOAT;
+SELECT * FROM GOAT;
+SELECT * FROM GOAT;
+DROP TABLE GOAT CASCADE;
+\q
+\t
+\dt
+\dv
+DROP TABLE goat;
+\i ImportGoat.sql 
+\i test.sql 
+\dv
+SELECT * FROM GOAT;
+\dt
+\d goat;
+\i test.sql 
+\dv
+SELECT * FROM GOATBIRTHCOHORT;
+SELECT * FROM goat;
+DROP VIEW GOATBIRTHCOHORT;
+DROP VIEW TOTALHERD
+;
+\i test.sql 
+SELECT * FROM GOATFAMILYTREE
+;
+\d goatfamilytree
+SELECT * FROM GOAT;
+\i test.sql 
+SELECT * FROM GOATFAMILYTREE
+;
+\d goat
+\dt
+\dt
+\q
+\dt
+drop table goat;
+drop table goat cascade;
+\dv
+\dt
+\i ImportGoat.sql 
+q
+\q\
+\dt
+\dv
+\i ImportGoat.sql 
+\dt
+\q
+\dt
+\dv
+\i ImportGoat.sql 
+\d goat
+\q
+\dt
+drop table goat;
+\i ImportGoat.sql 
+\d goat
+\q
+\dt
+drop table goat
+;
+\i ImportGoat.sql 
+drop table goat;
+\q
+\i ImportGoat.sql 
+\q
+\dt
+drop table goat;
+\i ImportGoat.sql 
+drop table goat;
+\q
+\i ImportGoat.sql 
+\dt
+\q
+\dt
+\dv
+\i ImportGoat.sql 
+drop table goat;
+\q
+\i ImportGoat.sql 
+:q
+\q
+\q
+\i ImportGoat.sql 
+DROP TABLE GOAT;
+\q
+\dt
+\dv
+\i ImportGoat.sql 
+drop table goat;
+\q
+\i ImportGoat.sql 
+drop table goat
+;
+\q
+\dt
+\dv
+\i ImportGoat.sql 
+drop table goat
+;
+\q
+\i ImportGoat.sql 
+\d Animal;
+\dt
+drop table goat;
+drop table goatdam;
+\q
+\i ImportGoat.sql 
+\dt
+SELECT * FROM GOAT;
+SELECT * FROM GOATdam;
+\d goatdam
+\q
+drop table goat
+;
+drop table goatdam
+;
+\i ImportGoat.sql 
+drop table goat;
+drop table goatdam;
+\q
+\i ImportGoat.sql 
+\dt
+\q
+\i I
+\i ImportGoat.sql 
+\q
+\i ImportGoat.sql 
+\dt
+drop table goat;
+\q
+\i ImportGoat.sql 
+drop table goat;
+\q
+\dt
+\dv
+\i ImportGoat.sql 
+\dt
+\q
+\dt
+\i ImportGoat.sql 
+\dt
+\q
+drop table goat;
+\i ImportGoat.sql 
+\d GOATDAM
+select * from goatdam;
+\i test.sql 
+\d goat
+\q
+\i
+\dt
+\dv
+drop table goat;
+drop table goat cascade;
+\dt
+drop table goatdamp;
+drop table goatdam;
+\dt
+\dv
+\i ImportGoat.sql 
+\i test.sql 
+\dv
+SELECT * FROM goatbirthcohort;
+SELECT * FROM goatfamilytree;
+SELECT * FROM goatbirthcohort;
+\dt
+\d goatdam
+\i test.sql 
+SELECT * FROM goatbirthcohort;
+SELECT * FROM goatfamilytree;
+\q
+\dt
+drop table goat;
+drop table goat cascade;
+drop table goatdam cascade;
+\dt
+\dv
+\i ImportGoat.sql 
+SELECT * FROM GOAT;
+DELETE FROM goat;
+delete from goatdam;
+DELETE FROM goat;
+SELECT * FROM GOAT;
+insert into goat (animal_id, tag, sex, dob)
+values
+(1, '1', 'm', '15-12-2004'),
+(2, '2', 'f', '15-12-2004'),
+(3, '3', 'f', '15-12-2004');
+insert into goat (animal_id, tag, sex, dob)
+values
+(1, '1', 'm', '12-12-2004'),
+(2, '2', 'f', '12-12-2004'),
+(3, '3', 'f', '12-12-2004');
+select * from goat;
+\d goatdam
+insert into goatdam values(animal_id, tag, dam)
+values
+(4, '4', '1'),
+(5, '5', '1'),
+(6, '6', '2'),
+(7, '7', ''),
+;
+insert into goatdam values(animal_id, tag, dam)
+values
+(4, '4', '1'),
+(5, '5', '1'),
+(6, '6', '2'),
+(7, '7', '')
+;
+insert into goatdam (animal_id, tag, dam)
+values
+(4, '4', '1'),
+(5, '5', '1'),
+(6, '6', '2'),
+(7, '7', '')
+;
+insert into goatdam (animal_id, tag, dam)
+values
+(4, '4', '1'),
+(5, '5', '1'),
+(6, '6', '2');
+select * from goatdam;
+select * from goat
+;
+insert into goat (animal_id, tag)
+values
+(4, '4', '1'),
+(5, '5', '1'),
+(6, '6', '2');
+insert into goat (animal_id, tag)
+values
+(4, '4'),
+(5, '5'),
+(6, '6');
+SELECT * FROM GOAT;
+SELECT * FROM GOATdam;
+insert into goatdam (animal_id, tag, dam)
+values
+(7, '7', '4'),,
+(8, '8', '5'),
+(9, '9', '6');
+insert into goatdam (animal_id, tag, dam)
+values
+(7, '7', '4'),
+(8, '8', '5'),
+(9, '9', '6');
+\i test.sql 
+select * from goatfamilytree 
+;
+\i test.sql 
+select * from goatfamil
+\q
+\dt
+drop table goat;
+drop table goat cascade;
+drop table goatdam;
+drop table goatdam cascade;
+\i ImportGoat.sql 
+SELECT * FROM GOATDAM;
+SELECT * FROM GOATDAM;
+\q
+\s
+\s phase5a

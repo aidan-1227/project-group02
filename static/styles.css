@@ -1,0 +1,107 @@
+/*
+ * CSC 315-01
+ * Professor DeGood
+ * Summary:
+ * 	Handles the styling for the webpage.html
+ *
+ * Primary Contributor: Milian Ingco
+ */
+
+body {
+	margin:0;
+	font-family: "Roboto", sans-serif;
+}
+
+.title_container {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 130px;
+	background-color: #f8f9fa;
+	text-align: center;
+	z-index: 999;
+	box-shadow: 0px 2px 4px rgba(0, 0, 0, .1);
+}
+
+.group_title {
+	text-align: center;
+	width: 100%;
+}
+
+.title {
+	font-size: 3em;
+}
+
+.groupby_text_container {
+	position: relative;
+	width: 100%;
+	top: 70px;
+	height: 20px;
+	text-align: left;
+	align-items: center;
+}
+
+.groupby {
+	font-size: 2em;
+	margin: 100px;
+}
+
+.group_container {
+	display: flex;
+	flex-wrap: wrap;
+	margin-top: 120px;
+}
+
+.family_tree_container {
+	flex: 0 0 auto;
+	background-color: rgba(250, 185, 210, 1);
+	width: 30%;
+	margin-left: 1.66%;
+       	margin-right: 1.66%;	
+}
+
+.birth_cohort_container {
+	flex: 0 0 auto;
+	background-color: rgba(162, 242, 197, 1);
+	width: 30%;
+	margin-left: 1.66%;
+	margin-right: 1.66%;
+}
+
+.all_goats_container {
+	flex: 0 0 auto;
+	background-color: rgba(210, 185, 250, 1);
+	width: 30%;
+	margin-left: 1.66%;
+	margin-right: 1.66%;
+}
+
+.input_forms {
+	margin: 20px;
+}
+
+.input_text {
+	font-size: 2em;	
+}
+
+textarea {
+	width: 100%;
+}
+
+.description {
+	font-size: 1.5em;
+}
+
+.example {
+	font-size: 1.2em;
+}
+
+.all_option {
+	font-size: 1.4em;
+}
+
+.submit_button {
+	height: 40px;
+	font-size: 1.05em;
+}

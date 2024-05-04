@@ -1,0 +1,33 @@
+~ denotes commands to run in the terminal
+= denotes text to write to a file
+[] denotes important files or folders
+
+~pip install virtualenv
+If says not added to path, 
+Go to home directory (cd ~) and open or create the file [.bashrc]
+Append to that file 
+=export PATH="$PATH:/var/lib/postgresql/.local/bin"
+Then save and quit, and run
+~source ~/.bashrc
+Then create a virtual environment
+~virtualenv venv
+To run it, run
+~source ./venv/bin/activate
+Once its open, install flask (this will install it temporarily as long as the virtual environment is open)
+
+For testing purposes: 
+As of right now the python file is called [backend.py] (real creative ik) so to start the server, run this while in the folder [/project-group02$]
+~python3 backend.py
+Then open the file [webpage.html] in the browser of your choice
+
+
+
+
+
+For me:
+Installed psycopg2-binary
+
+
+
+
+

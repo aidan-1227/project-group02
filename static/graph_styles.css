@@ -1,0 +1,58 @@
+/*
+ * CSC 315-01
+ * Professor DeGood
+ * Summary:
+ *      Handles the styling for the graph.html
+ *
+ * Primary Contributor: Milian Ingco
+ */
+
+body {
+        margin:0;
+        font-family: "Roboto", sans-serif;
+}
+
+.title_container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 130px;
+        background-color: #f8f9fa;
+        text-align: center;
+        z-index: 999;
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, .1);
+}
+
+.group_title {
+        text-align: center;
+        width: 100%;
+}
+
+.title {
+        font-size: 3em;
+}
+
+.graph_container {
+	display: flex;
+	flex-wrap: wrap;
+	margin-top: 100px;
+}
+
+.graph_display {
+	flex: 0 0 auto;
+	width: 40%;
+	margin-left: 5%;
+	margin-right: 5%;
+}
+
+.reg_select {
+	flex: 0 0 auto;
+	background-color: white;
+	margin: 3%;
+	width: 27%;
+}
+
+.select_title {
+	text-align: center;
+}

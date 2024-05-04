@@ -1,0 +1,63 @@
+<!--
+CSC 315-01
+Professor DeGood
+Summary:
+	This is the graphing page which is used to display and analyze the goats' data. 
+
+Primary Contributor: Milian Ingco
+-->
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>GOATED GROWTH</title>
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='graph_styles.css') }}">
+	<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+	<!-- sets title -->
+        <div class="title_container">
+                <h1 class="title">GOATED GROWTH</h1>
+        </div>	
+
+	<!-- displays for graphs -->
+	<div class="graph_container">
+		<div class="graph_display">
+			<h1>Goats' Weight over time</h1>
+			<div id="scatter-plot">{{ scatter_plot|safe }}</div>
+		</div>
+		
+		<div class="graph_display">
+			<h1>Rate of Weight Gain over time</h1>
+			<div id="deriv-plot">{{ deriv_plot|safe }}</div>
+		</div>
+	</div>
+
+	<!-- inputs for types of graphs -->
+	<div class="graph_container">
+		<!-- linear regression -->
+		<div class="reg_select">
+			<h2 class="select_title">Linear Regression</h2>
+			<form action="http://localhost:5000/linear" method="post">
+				<input class="submit_button" type="submit" value="Calculate Linear Regression">
+			</form>
+		</div>
+		<!-- logarithmic regression -->
+		<div class="reg_select">
+			<h2 class="select_title">Logarithmic Regression</h2>
+			<form action="http://localhost:5000/logarithmic" method="post">
+				<input class="submit_button" type="submit" value="Calculate Log Regression">
+			</form>
+		</div>
+		<!-- multiple linear regression -->
+		<div class="reg_select">
+			<h2 class="select_title">Piecewise Linear Regression</h2>
+			<form action="http://localhost:5000/piecewise" method="post">
+				<input class="submit_button" type="submit" value="Calculate Piecewise Regression">
+			</form>
+		</div>
+	</div>
+
+</body>
+</html>

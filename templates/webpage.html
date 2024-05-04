@@ -1,0 +1,138 @@
+<!-- 
+CSC 315-01
+Professor DeGood
+Summary: 
+	This is the homepage for my website which handles the inputs and selecting
+	which groups are analyzed. This then sends the data to the corresponding
+	flask link where its processed. 
+
+Primary Contributor: Milian Ingco
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+	<head> 
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>GOATED GROWTH</title>
+		<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+	</head>
+
+   <body> 
+
+	<!-- sets title -->
+	<div class="title_container">
+		<h1 class="title">GOATED GROWTH</h1>
+	</div>
+
+	<!-- sets label -->
+	<div class="groupby_text_container">
+		<h3 class="groupby">Group Analysis By: </h3>
+	</div>
+
+	<!-- container of settings -->
+	<div class="group_container">
+		<div class="family_tree_container">
+			<div class="group_title">
+				<h2 class="title">FAMILY TREE</h2>
+			</div>
+			<div class="input_forms">
+				<form action="http://localhost:5000/family_tree" method="post">
+					<p class="input_text">Enter list of dam tags to compare</p>
+					<textarea id="text_area" name="dam_text" rows="4"></textarea>
+					<p><input class="submit_button" type="submit" value="submit family tree"></p>	
+				</form>
+			
+				<p class="description">
+					To find the growth rate of all the children of any dam/s: 
+				</p>
+				<ol class="description">
+					<li>Enter 1 or many tags for the dams you want to compare. To enter multiple dams, separate each tag by a comma</li>
+					<li>Hit the 'submit family tree' button</li>
+				</ol>
+				<p class="example">
+					For example: 123, 456, 789
+				</p>
+			</div>
+		</div>
+	
+		<div class="birth_cohort_container">
+			<div class="group_title">
+				<h2 class="title">BIRTH COHORT</h2>
+			</div>
+			<div class="input_forms">
+				<form action="http://localhost:5000/birth_cohort" method="post">
+					<p class="input_text">Enter the earliest birthdate of a birth cohort</p>
+					<input type="date" id="earliest_date" name="earliest_birthdate">
+					<p class="input_text">Enter the latest birthdate of a birth cohort</p>
+					<input type="date" id="latest_date" name="latest_birthdate">
+					<p><input class="submit_button" type="submit" value="submit birth cohort"></p>
+				</form>
+				
+				<p class="description">
+					To find the growth rate of all goats in a given birth cohort:
+				</p>
+				<ol class="description">
+					<li>Click the first calendar icon and select the earliest birth date, or type it out manually</li>
+					<li>Click the second calendar icon and select the latest birth date, or type it out manually</li>
+					<li>Hit the 'submit birth cohort' button</li>
+				</ol>
+				<p class="example">
+					Ensure that the earliest date is before the latest date
+				</p>
+			</div>
+		</div>
+	
+		<div class="all_goats_container">
+			<div class="group_title">
+				<h2 class="title">ALL GOATS</h2>
+			</div>
+			<div class="input_forms">
+				<form action="http://localhost:5000/all_goats" method="post">
+					<p class="input_text">Select a group to analyze</p>
+					<input type="radio" id="option1" name="all_goat_options" value="Dead">
+					<label class="all_option" for="option1">Is dead</label><br>
+
+					<input type="radio" id="option2" name="all_goat_options" value="Current">
+					<label class="all_option" for="option2">Is alive</label><br>
+
+					<input type="radio" id="option3" name="all_goat_options" value="Sold">
+					<label class="all_option" for="option3">Is sold</label><br>
+
+					<input type="radio" id="option4" name="all_goat_options" value="all" checked>
+					<label class="all_option" for="option4">All goats</label><br>
+
+					<p><input class="submit_button" type="submit" value="submit all goats"></p>
+				</form>
+
+				<p class="description">
+					To find the growth rate of all goats in one of the above groups:
+				</p>
+				<ol class="description">
+					<li>Select the desired group by clicking on one of the above buttons</li>
+					<li>Hit the 'submit all goats' button</li>
+				</ol>
+				<p class="example">
+					For further explanation, 'Is dead' will only analyze all the goats marked as dead, 'Is alive' will only analyze all the goats that are not marked as dead and are not marked as sold, 'Is sold' will analyze all goats that are marked as sold, and 'All goats' will just analyze all goats growth without any markers.
+				</p>
+		</div>
+	</div>
+
+	<!-- submits value to this page 
+      <form action = "http://localhost:5000/home" method = "post">
+          
+ 
+<p>Enter Min date:</p>
+
+<p><input type = "date" id="MinDateID" name = "mindate"></p>
+
+<p>Enter Max date:</p>
+
+<p><input type = "date" id="MaxDateID" name = "maxdate"></p>
+ 
+<p><input type = "submit" value = "submit" /></p>
+ 
+ 
+		</form>      -->
+   </body>
+</html>
